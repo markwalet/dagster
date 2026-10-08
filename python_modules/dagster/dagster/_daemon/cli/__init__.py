@@ -23,6 +23,8 @@ from dagster._daemon.daemon import get_telemetry_daemon_session_id
 from dagster._serdes import deserialize_value
 from dagster._utils.interrupts import capture_interrupts, setup_interrupt_handlers
 
+DEFAULT_DB_POOL_RECYCLE = 3600  # 1 hr
+
 
 def _get_heartbeat_tolerance():
     tolerance = os.getenv(
@@ -71,6 +73,28 @@ def _get_heartbeat_tolerance():
     hidden=True,
     help="Internal use only. Pass a readable pipe file descriptor to the daemon process that will be monitored for a shutdown signal.",
 )
+@click.option(
+    "--db-pool-max-overflow",
+    type=click.INT,
+    required=False,
+    help=(
+        "Reuse open database connections across storage calls instead of opening a new"
+        " connection for each one, allowing up to this many extra connections under concurrent"
+        " load. Set to -1 for no limit. Disabled by default. Not respected in all configurations."
+    ),
+    envvar="DAGSTER_DAEMON_DB_POOL_MAX_OVERFLOW",
+)
+@click.option(
+    "--db-pool-recycle",
+    type=click.INT,
+    show_default=True,
+    default=DEFAULT_DB_POOL_RECYCLE,
+    help=(
+        "The maximum age of a pooled connection before it is recycled. Set to -1 to disable."
+        " Only used with --db-pool-max-overflow."
+    ),
+    envvar="DAGSTER_DAEMON_DB_POOL_RECYCLE",
+)
 @workspace_options
 def run_command(
     code_server_log_level: str,
@@ -78,6 +102,8 @@ def run_command(
     log_format: str,
     instance_ref: str | None,
     shutdown_pipe: int | None,
+    db_pool_max_overflow: int | None,
+    db_pool_recycle: int,
     **other_opts: object,
 ) -> None:
     workspace_opts = WorkspaceOpts.extract_from_cli_options(other_opts)
@@ -94,6 +120,14 @@ def run_command(
             with get_instance_for_cli(
                 instance_ref=deserialize_value(instance_ref, InstanceRef) if instance_ref else None
             ) as instance:
+                if db_pool_max_overflow is not None:
+                    # same pooled engines the webserver uses, but without a statement timeout:
+                    # daemon queries are not bounded by a request
+                    instance.optimize_for_webserver(
+                        statement_timeout=0,
+                        pool_recycle=db_pool_recycle,
+                        max_overflow=db_pool_max_overflow,
+                    )
                 _daemon_run_command(
                     instance, log_level, code_server_log_level, log_format, workspace_opts
                 )
