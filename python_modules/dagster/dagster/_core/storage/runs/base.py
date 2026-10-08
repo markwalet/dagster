@@ -329,10 +329,21 @@ class RunStorage(ABC, MayHaveInstanceWeakref[T_DagsterInstance], DaemonCursorSto
     def dispose(self) -> None:
         """Explicit lifecycle management."""
 
+    def enable_connection_pool(
+        self, pool_recycle: int, max_overflow: int, statement_timeout: int | None = None
+    ) -> None:
+        """Reuse open database connections instead of opening one per call, in a long lived
+        process such as the webserver or the daemon. If set, `statement_timeout` (ms) is applied to
+        each connection.
+        """
+        # storages that only implement the older webserver hook keep their webserver behavior
+        if statement_timeout is not None:
+            self.optimize_for_webserver(statement_timeout, pool_recycle, max_overflow)
+
     def optimize_for_webserver(
         self, statement_timeout: int, pool_recycle: int, max_overflow: int
     ) -> None:
-        """Allows for optimizing database connection / use in the context of a long lived webserver process."""
+        """Deprecated hook for the webserver, superseded by `enable_connection_pool`."""
 
     # Daemon Heartbeat Storage
     #

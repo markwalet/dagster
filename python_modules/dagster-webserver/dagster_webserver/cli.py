@@ -249,7 +249,11 @@ def dagster_webserver(
             )
         )
         # Allow the instance components to change behavior in the context of a long running server process
-        instance.optimize_for_webserver(db_statement_timeout, db_pool_recycle, db_pool_max_overflow)
+        instance.enable_connection_pool(
+            pool_recycle=db_pool_recycle,
+            max_overflow=db_pool_max_overflow,
+            statement_timeout=db_statement_timeout,
+        )
 
         with WorkspaceProcessContext(
             instance,

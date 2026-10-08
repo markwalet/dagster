@@ -77,27 +77,42 @@ class StorageMethods:
             cursor=cursor,
         )
 
+    def enable_connection_pool(
+        self,
+        pool_recycle: int,
+        max_overflow: int,
+        statement_timeout: int | None = None,
+    ) -> None:
+        """Reuse open database connections instead of opening one per storage call. Meant for
+        long lived processes such as the webserver and the daemon.
+        """
+        if self._schedule_storage:
+            self._schedule_storage.enable_connection_pool(
+                pool_recycle=pool_recycle,
+                max_overflow=max_overflow,
+                statement_timeout=statement_timeout,
+            )
+        self._run_storage.enable_connection_pool(
+            pool_recycle=pool_recycle,
+            max_overflow=max_overflow,
+            statement_timeout=statement_timeout,
+        )
+        self._event_storage.enable_connection_pool(
+            pool_recycle=pool_recycle,
+            max_overflow=max_overflow,
+            statement_timeout=statement_timeout,
+        )
+
     def optimize_for_webserver(
         self,
         statement_timeout: int,
         pool_recycle: int,
         max_overflow: int,
     ) -> None:
-        if self._schedule_storage:
-            self._schedule_storage.optimize_for_webserver(
-                statement_timeout=statement_timeout,
-                pool_recycle=pool_recycle,
-                max_overflow=max_overflow,
-            )
-        self._run_storage.optimize_for_webserver(
-            statement_timeout=statement_timeout,
+        self.enable_connection_pool(
             pool_recycle=pool_recycle,
             max_overflow=max_overflow,
-        )
-        self._event_storage.optimize_for_webserver(
             statement_timeout=statement_timeout,
-            pool_recycle=pool_recycle,
-            max_overflow=max_overflow,
         )
 
     def reindex(self, print_fn: PrintFn = lambda _: None) -> None:

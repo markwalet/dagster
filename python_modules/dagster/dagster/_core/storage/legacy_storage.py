@@ -315,6 +315,13 @@ class LegacyRunStorage(RunStorage, ConfigurableClass):
     def dispose(self) -> None:
         return self._storage.run_storage.dispose()
 
+    def enable_connection_pool(
+        self, pool_recycle: int, max_overflow: int, statement_timeout: int | None = None
+    ) -> None:
+        return self._storage.run_storage.enable_connection_pool(
+            pool_recycle, max_overflow, statement_timeout
+        )
+
     def optimize_for_webserver(
         self, statement_timeout: int, pool_recycle: int, max_overflow: int
     ) -> None:
@@ -475,6 +482,13 @@ class LegacyEventLogStorage(EventLogStorage, ConfigurableClass):
 
     def dispose(self) -> None:
         return self._storage.event_log_storage.dispose()
+
+    def enable_connection_pool(
+        self, pool_recycle: int, max_overflow: int, statement_timeout: int | None = None
+    ) -> None:
+        return self._storage.event_log_storage.enable_connection_pool(
+            pool_recycle, max_overflow, statement_timeout
+        )
 
     def optimize_for_webserver(
         self, statement_timeout: int, pool_recycle: int, max_overflow: int
@@ -984,6 +998,13 @@ class LegacyScheduleStorage(ScheduleStorage, ConfigurableClass):
 
     def optimize(self, print_fn: PrintFn | None = None, force_rebuild_all: bool = False) -> None:
         return self._storage.schedule_storage.optimize(print_fn, force_rebuild_all)
+
+    def enable_connection_pool(
+        self, pool_recycle: int, max_overflow: int, statement_timeout: int | None = None
+    ) -> None:
+        return self._storage.schedule_storage.enable_connection_pool(
+            pool_recycle, max_overflow, statement_timeout
+        )
 
     def optimize_for_webserver(
         self, statement_timeout: int, pool_recycle: int, max_overflow: int

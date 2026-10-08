@@ -167,11 +167,11 @@ def test_backfill_threadpool():
         ([], None),
         (
             ["--db-pool-max-overflow", "5"],
-            {"statement_timeout": 0, "pool_recycle": 3600, "max_overflow": 5},
+            {"pool_recycle": 3600, "max_overflow": 5},
         ),
         (
             ["--db-pool-max-overflow", "-1", "--db-pool-recycle", "60"],
-            {"statement_timeout": 0, "pool_recycle": 60, "max_overflow": -1},
+            {"pool_recycle": 60, "max_overflow": -1},
         ),
     ],
 )
@@ -187,7 +187,7 @@ def test_db_pool_options(monkeypatch: pytest.MonkeyPatch, args, expected) -> Non
         monkeypatch.setattr("dagster._daemon.cli._daemon_run_command", lambda *_args: None)
         monkeypatch.setattr(
             dg.DagsterInstance,
-            "optimize_for_webserver",
+            "enable_connection_pool",
             lambda _self, **kwargs: calls.append(kwargs),
         )
 

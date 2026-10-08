@@ -121,12 +121,8 @@ def run_command(
                 instance_ref=deserialize_value(instance_ref, InstanceRef) if instance_ref else None
             ) as instance:
                 if db_pool_max_overflow is not None:
-                    # same pooled engines the webserver uses, but without a statement timeout:
-                    # daemon queries are not bounded by a request
-                    instance.optimize_for_webserver(
-                        statement_timeout=0,
-                        pool_recycle=db_pool_recycle,
-                        max_overflow=db_pool_max_overflow,
+                    instance.enable_connection_pool(
+                        pool_recycle=db_pool_recycle, max_overflow=db_pool_max_overflow
                     )
                 _daemon_run_command(
                     instance, log_level, code_server_log_level, log_format, workspace_opts

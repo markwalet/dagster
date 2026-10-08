@@ -87,10 +87,10 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
             SqlEventLogStorageMetadata.create_all(conn)
             stamp_alembic_rev(mysql_alembic_config(__file__), conn)
 
-    def optimize_for_webserver(
-        self, statement_timeout: int, pool_recycle: int, max_overflow: int
+    def enable_connection_pool(
+        self, pool_recycle: int, max_overflow: int, statement_timeout: int | None = None
     ) -> None:
-        # When running in dagster-webserver, hold an open connection
+        # hold an open connection for reuse instead of opening one per call
         # https://github.com/dagster-io/dagster/issues/3719
         self._engine = create_engine(
             self.mysql_url,
@@ -99,6 +99,11 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
             pool_recycle=pool_recycle,
             max_overflow=max_overflow,
         )
+
+    def optimize_for_webserver(
+        self, statement_timeout: int, pool_recycle: int, max_overflow: int
+    ) -> None:
+        self.enable_connection_pool(pool_recycle, max_overflow, statement_timeout)
 
     def upgrade(self) -> None:
         alembic_config = mysql_alembic_config(__file__)

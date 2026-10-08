@@ -116,10 +116,10 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
                 # This revision may be shared by any other dagster storage classes using the same DB
                 stamp_alembic_rev(pg_alembic_config(__file__), conn)
 
-    def optimize_for_webserver(
-        self, statement_timeout: int, pool_recycle: int, max_overflow: int
+    def enable_connection_pool(
+        self, pool_recycle: int, max_overflow: int, statement_timeout: int | None = None
     ) -> None:
-        # When running in dagster-webserver, hold an open connection and set statement_timeout
+        # hold an open connection for reuse instead of opening one per call
         kwargs: dict[str, Any] = {
             "isolation_level": "AUTOCOMMIT",
             "pool_size": 1,
@@ -130,11 +130,18 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
         if existing_options:
             kwargs["connect_args"] = {"options": existing_options}
         self._engine = create_pg_engine(self.postgres_url, self._token_provider, **kwargs)
-        event.listen(
-            self._engine,
-            "connect",
-            lambda connection, _: set_pg_statement_timeout(connection, statement_timeout),
-        )
+        if statement_timeout is not None:
+            timeout = statement_timeout
+            event.listen(
+                self._engine,
+                "connect",
+                lambda connection, _: set_pg_statement_timeout(connection, timeout),
+            )
+
+    def optimize_for_webserver(
+        self, statement_timeout: int, pool_recycle: int, max_overflow: int
+    ) -> None:
+        self.enable_connection_pool(pool_recycle, max_overflow, statement_timeout)
 
     @property
     def inst_data(self) -> ConfigurableClassData | None:
